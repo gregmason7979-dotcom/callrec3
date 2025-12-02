@@ -817,8 +817,136 @@
                         return is_numeric($deleted) ? (int) $deleted : 0;
                 }
 
-                private function upsertRecordingIndex(array $record, $lastSeenUtc)
+                private function createRecordingIndexUpsertContext()
                 {
+                        $update = array(
+                                'recording_name' => null,
+                                'service_group' => null,
+                                'other_party' => null,
+                                'call_id' => null,
+                                'description' => null,
+                                'recorded_at' => null,
+                                'file_size' => null,
+                                'last_seen_at' => null,
+                                'agent_directory' => null,
+                                'relative_path' => null,
+                        );
+
+                        $insert = array(
+                                'agent_directory' => null,
+                                'relative_path' => null,
+                                'recording_name' => null,
+                                'service_group' => null,
+                                'other_party' => null,
+                                'call_id' => null,
+                                'description' => null,
+                                'recorded_at' => null,
+                                'file_size' => null,
+                                'last_seen_at' => null,
+                        );
+
+                        $updateSql = "UPDATE dbo.recordings_index\n"
+                                   . "SET recording_name = ?, service_group = ?, other_party = ?, call_id = ?, description = ?, recorded_at = ?, file_size = ?, last_seen_at = ?\n"
+                                   . "WHERE agent_directory = ? AND relative_path = ?";
+                        $updateParams = array(
+                                &$update['recording_name'],
+                                &$update['service_group'],
+                                &$update['other_party'],
+                                &$update['call_id'],
+                                &$update['description'],
+                                &$update['recorded_at'],
+                                &$update['file_size'],
+                                &$update['last_seen_at'],
+                                &$update['agent_directory'],
+                                &$update['relative_path'],
+                        );
+
+                        $insertSql = "INSERT INTO dbo.recordings_index (agent_directory, relative_path, recording_name, service_group, other_party, call_id, description, recorded_at, file_size, last_seen_at)\n"
+                                   . "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                        $insertParams = array(
+                                &$insert['agent_directory'],
+                                &$insert['relative_path'],
+                                &$insert['recording_name'],
+                                &$insert['service_group'],
+                                &$insert['other_party'],
+                                &$insert['call_id'],
+                                &$insert['description'],
+                                &$insert['recorded_at'],
+                                &$insert['file_size'],
+                                &$insert['last_seen_at'],
+                        );
+
+                        $updateStmt = sqlsrv_prepare(connect, $updateSql, $updateParams);
+                        $insertStmt = sqlsrv_prepare(connect, $insertSql, $insertParams);
+
+                        if ($updateStmt === false || $insertStmt === false) {
+                                $this->logMessage('error', 'Failed to prepare recording index statements', array('errors' => $this->collectSqlErrors()));
+                                return null;
+                        }
+
+                        return array(
+                                'update' => array('statement' => $updateStmt, 'params' => &$update),
+                                'insert' => array('statement' => $insertStmt, 'params' => &$insert),
+                        );
+                }
+
+                private function freeRecordingIndexUpsertContext($context)
+                {
+                        if (!is_array($context)) {
+                                return;
+                        }
+
+                        if (isset($context['update']['statement']) && $context['update']['statement'] !== false) {
+                                sqlsrv_free_stmt($context['update']['statement']);
+                        }
+
+                        if (isset($context['insert']['statement']) && $context['insert']['statement'] !== false) {
+                                sqlsrv_free_stmt($context['insert']['statement']);
+                        }
+                }
+
+                private function upsertRecordingIndex(array $record, $lastSeenUtc, $context = null)
+                {
+                        if (is_array($context) && isset($context['update'], $context['update']['params'], $context['insert'], $context['insert']['params'])) {
+                                $context['update']['params']['recording_name'] = $record['recording_name'];
+                                $context['update']['params']['service_group'] = $record['service_group'];
+                                $context['update']['params']['other_party'] = $record['other_party'];
+                                $context['update']['params']['call_id'] = $record['call_id'];
+                                $context['update']['params']['description'] = $record['description'];
+                                $context['update']['params']['recorded_at'] = $record['recorded_at'];
+                                $context['update']['params']['file_size'] = $record['file_size'];
+                                $context['update']['params']['last_seen_at'] = $lastSeenUtc;
+                                $context['update']['params']['agent_directory'] = $record['agent_directory'];
+                                $context['update']['params']['relative_path'] = $record['relative_path'];
+
+                                if (sqlsrv_execute($context['update']['statement'])) {
+                                        $updatedRows = sqlsrv_rows_affected($context['update']['statement']);
+
+                                        if (is_numeric($updatedRows) && $updatedRows > 0) {
+                                                return 'updated';
+                                        }
+                                }
+
+                                $context['insert']['params']['agent_directory'] = $record['agent_directory'];
+                                $context['insert']['params']['relative_path'] = $record['relative_path'];
+                                $context['insert']['params']['recording_name'] = $record['recording_name'];
+                                $context['insert']['params']['service_group'] = $record['service_group'];
+                                $context['insert']['params']['other_party'] = $record['other_party'];
+                                $context['insert']['params']['call_id'] = $record['call_id'];
+                                $context['insert']['params']['description'] = $record['description'];
+                                $context['insert']['params']['recorded_at'] = $record['recorded_at'];
+                                $context['insert']['params']['file_size'] = $record['file_size'];
+                                $context['insert']['params']['last_seen_at'] = $lastSeenUtc;
+
+                                if (sqlsrv_execute($context['insert']['statement'])) {
+                                        return 'inserted';
+                                }
+
+                                $this->logMessage('error', 'Failed to upsert indexed recording', array('record' => $record, 'errors' => $this->collectSqlErrors()));
+
+                                return false;
+                        }
+
                         $updateSql = "UPDATE dbo.recordings_index\n"
                                    . "SET recording_name = ?, service_group = ?, other_party = ?, call_id = ?, description = ?, recorded_at = ?, file_size = ?, last_seen_at = ?\n"
                                    . "WHERE agent_directory = ? AND relative_path = ?";
@@ -973,6 +1101,7 @@
                         $isIncremental = ($mode === 'incremental');
                         $lastSeenAt = $isIncremental ? $this->getLatestIndexedSeenAt() : null;
                         $lastSeenTimestamp = $this->normalizeRecordingIndexTimestamp($lastSeenAt);
+                        $upsertContext = $this->createRecordingIndexUpsertContext();
 
                         $stats = array(
                                 'inserted' => 0,
@@ -1109,7 +1238,7 @@
                                                 'file_size' => $info->getSize(),
                                         );
 
-                                        $result = $this->upsertRecordingIndex($record, $passStartedAt);
+                                        $result = $this->upsertRecordingIndex($record, $passStartedAt, $upsertContext);
 
                                         $stats['seen']++;
 
@@ -1124,6 +1253,8 @@
                         if (!$isIncremental) {
                                 $stats['deleted'] = $this->deleteStaleIndexedRecords($passStartedAt);
                         }
+
+                        $this->freeRecordingIndexUpsertContext($upsertContext);
 
                         $this->logMessage('info', 'Recording indexer completed', $stats);
 
