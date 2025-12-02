@@ -353,8 +353,20 @@ No previous sync found. Click to build the index.
                 'service_group' => $serviceGroupFilter,
                 'call_id' => $callIdFilter,
                 'start_date' => $startDateFilter,
-                'end_date' => $endDateFilter
+                'end_date' => $endDateFilter,
+                'agent' => $selectedAgentFilter,
         );
+
+        $agentRoster = $model->getAgentRoster();
+        $agentNameMap = array();
+
+        foreach ($agentRoster as $agentEntry) {
+                if (!isset($agentEntry['directory'])) {
+                        continue;
+                }
+
+                $agentNameMap[$agentEntry['directory']] = isset($agentEntry['displayName']) ? $agentEntry['displayName'] : $agentEntry['directory'];
+        }
 
         function recordingMatchesFilters($filters, $record)
         {
@@ -389,8 +401,8 @@ No previous sync found. Click to build the index.
         }
 
         if($actionType === '')
-	{
-	$rosterEntries = $model->getAgentRoster();
+        {
+        $rosterEntries = $agentRoster;
 ?>
         <table class="record-table record-table--roster">
           <colgroup>
@@ -463,9 +475,10 @@ No previous sync found. Click to build the index.
         </table>
 <?php
 }else{
-		$i=0;
-		$list_full = scandir($directory);
-		?>
+                $i=0;
+                $indexedResults = $model->searchIndexedRecordings($filters, 500);
+                $list_full = is_array($indexedResults) ? array() : scandir($directory);
+                ?>
     <table class="record-table">
                                            <tr class="table_top">
                                            <th width="300">Agent Name</th>
@@ -476,6 +489,49 @@ No previous sync found. Click to build the index.
                                                         <th>Description</th>
                                            </tr>
         <?php
+        if (is_array($indexedResults)) {
+                if (empty($indexedResults)) {
+        ?>
+        <tr class="table_row table_row--empty"><td colspan="6" class="table_cell--empty">No recordings matched your filters. Try relaxing the criteria.</td></tr>
+        <?php
+                } else {
+                        $grouped = array();
+
+                        foreach ($indexedResults as $record) {
+                                $agentKey = isset($record['agent']) ? $record['agent'] : '';
+                                $grouped[$agentKey][] = $record;
+                        }
+
+                        foreach ($grouped as $agentKey => $agentRecords) {
+                                $agentLabel = isset($agentNameMap[$agentKey]) ? $agentNameMap[$agentKey] : $agentKey;
+        ?>
+                                               <tr class="table_row table_row--agent"><td colspan="6" class="table_content">
+                                                 <span class="icon-chip icon-chip--chevron" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="m10.5 7.5 5 4.5-5 4.5a.75.75 0 0 1-1-.06.75.75 0 0 1 .06-1l3.63-3.27L9.56 8.56a.75.75 0 0 1 1-1.06Z"/></svg></span>
+                                                 <span class="icon-chip icon-chip--agent" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="M12 13.25a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 1.5c-3.51 0-6.5 1.92-6.5 4.5a.75.75 0 0 0 .75.75h11.5a.75.75 0 0 0 .75-.75c0-2.58-2.99-4.5-6.5-4.5Z"/></svg></span>
+                                                 <span class="table-link">
+                                                   <span class="table-link__label"><?php echo htmlspecialchars($agentLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+                                                   <span class="table-link__hint">Filtered results</span>
+                                                 </span>
+                                                 <span class="table-link__chevron" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                                               </td>
+                                          </tr>
+        <?php
+                                foreach ($agentRecords as $record) {
+                                        $i++;
+                                        echo $model->renderRecordingRow(
+                                                $i,
+                                                $record['segments'],
+                                                $record['downloadName'],
+                                                $record['otherparty'],
+                                                $record['datetime'],
+                                                $record['servicegroup'],
+                                                $record['callId'],
+                                                $record['description']
+                                        );
+                                }
+                        }
+                }
+        } else {
         foreach($list_full as $value_full)
         {
                 if (in_array($value_full,array(".",".."))) {
@@ -486,17 +542,28 @@ No previous sync found. Click to build the index.
                         continue;
                 }
 
-                $select        =       "select first_name,last_name from dbo.cc_user where id='".ltrim($value_full,'0')."'";
-                $query  =       sqlsrv_query(connect,$select);
+                $agentLabel = isset($agentNameMap[$value_full]) ? $agentNameMap[$value_full] : null;
 
-                if($query==true){
-                $result =       sqlsrv_fetch_array($query,SQLSRV_FETCH_ASSOC);
+                if ($agentLabel === null) {
+                        $select        =       "select first_name,last_name from dbo.cc_user where id='".ltrim($value_full,'0')."'";
+                        $query  =       sqlsrv_query(connect,$select);
+
+                        if($query==true){
+                        $result =       sqlsrv_fetch_array($query,SQLSRV_FETCH_ASSOC);
+                        $agentLabel = (isset($result['first_name']) ? $result['first_name'] . ' ' : '') . (isset($result['last_name']) ? $result['last_name'] : '');
+                        sqlsrv_free_stmt($query);
+                        }
+                }
+
+                if ($agentLabel === null || $agentLabel === '') {
+                        $agentLabel = $value_full;
+                }
         ?>
                                                <tr class="table_row table_row--agent"><td colspan="6" class="table_content">
                                                  <span class="icon-chip icon-chip--chevron" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="m10.5 7.5 5 4.5-5 4.5a.75.75 0 0 1-1-.06.75.75 0 0 1 .06-1l3.63-3.27L9.56 8.56a.75.75 0 0 1 1-1.06Z"/></svg></span>
                                                  <span class="icon-chip icon-chip--agent" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="M12 13.25a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 1.5c-3.51 0-6.5 1.92-6.5 4.5a.75.75 0 0 0 .75.75h11.5a.75.75 0 0 0 .75-.75c0-2.58-2.99-4.5-6.5-4.5Z"/></svg></span>
                                                  <span class="table-link">
-                                                   <span class="table-link__label"><?php echo $result['first_name'] ?> <?php echo $result['last_name']; ?></span>
+                                                   <span class="table-link__label"><?php echo htmlspecialchars($agentLabel, ENT_QUOTES, 'UTF-8'); ?></span>
                                                    <span class="table-link__hint">Filtered results</span>
                                                  </span>
                                                  <span class="table-link__chevron" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
