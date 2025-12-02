@@ -1004,6 +1004,15 @@
                                         continue;
                                 }
 
+                                if ($isIncremental && $lastSeenTimestamp !== null) {
+                                        $agentMTime = @filemtime($agentPath);
+
+                                        if ($agentMTime !== false && $agentMTime <= $lastSeenTimestamp) {
+                                                // Skip whole agent folder when nothing changed since last sync
+                                                continue;
+                                        }
+                                }
+
                                 try {
                                         $iterator = new \RecursiveIteratorIterator(
                                                 new \RecursiveCallbackFilterIterator(
