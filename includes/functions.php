@@ -972,15 +972,7 @@
 
                         $isIncremental = ($mode === 'incremental');
                         $lastSeenAt = $isIncremental ? $this->getLatestIndexedSeenAt() : null;
-                        $lastSeenTimestamp = null;
-
-                        if ($lastSeenAt !== null) {
-                                if ($lastSeenAt instanceof \DateTimeInterface) {
-                                        $lastSeenTimestamp = $lastSeenAt->getTimestamp();
-                                } else {
-                                        $lastSeenTimestamp = strtotime((string) $lastSeenAt);
-                                }
-                        }
+                        $lastSeenTimestamp = $this->normalizeRecordingIndexTimestamp($lastSeenAt);
 
                         $stats = array(
                                 'inserted' => 0,
@@ -1014,9 +1006,30 @@
 
                                 try {
                                         $iterator = new \RecursiveIteratorIterator(
-                                                new \RecursiveDirectoryIterator(
-                                                        $agentPath,
-                                                        \FilesystemIterator::SKIP_DOTS
+                                                new \RecursiveCallbackFilterIterator(
+                                                        new \RecursiveDirectoryIterator(
+                                                                $agentPath,
+                                                                \FilesystemIterator::SKIP_DOTS
+                                                        ),
+                                                        function ($current, $key, $iterator) use ($isIncremental, $lastSeenTimestamp) {
+                                                                if (!$isIncremental || $lastSeenTimestamp === null) {
+                                                                        return true;
+                                                                }
+
+                                                                if ($current->isDir()) {
+                                                                        $dirMTime = $current->getMTime();
+
+                                                                        return ($dirMTime === false) || ($dirMTime > $lastSeenTimestamp);
+                                                                }
+
+                                                                if ($current->isFile()) {
+                                                                        $fileMTime = $current->getMTime();
+
+                                                                        return ($fileMTime === false) || ($fileMTime > $lastSeenTimestamp);
+                                                                }
+
+                                                                return false;
+                                                        }
                                                 ),
                                                 \RecursiveIteratorIterator::LEAVES_ONLY
                                         );
@@ -1108,6 +1121,41 @@
                         return $stats;
                 }
 
+                public function getRecordingIndexLastSyncedAt()
+                {
+                        if (!$this->recordingIndexAvailable()) {
+                                return null;
+                        }
+
+                        $lastSeenAt = $this->getLatestIndexedSeenAt();
+
+                        if ($lastSeenAt === null) {
+                                return null;
+                        }
+
+                        $localTimezone = new \DateTimeZone(date_default_timezone_get());
+
+                        if ($lastSeenAt instanceof \DateTimeInterface) {
+                                $normalized = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $lastSeenAt->format('Y-m-d H:i:s'), new \DateTimeZone('UTC'));
+
+                                return $normalized ? $normalized->setTimezone($localTimezone) : $lastSeenAt->setTimezone($localTimezone);
+                        }
+
+                        $parsed = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', (string) $lastSeenAt, new \DateTimeZone('UTC'));
+
+                        if ($parsed instanceof \DateTimeImmutable) {
+                                return $parsed->setTimezone($localTimezone);
+                        }
+
+                        $timestamp = strtotime((string) $lastSeenAt);
+
+                        if ($timestamp !== false) {
+                                return (new \DateTimeImmutable('@' . $timestamp))->setTimezone($localTimezone);
+                        }
+
+                        return null;
+                }
+
                 private function getLatestIndexedSeenAt()
                 {
                         if (!$this->recordingIndexAvailable()) {
@@ -1130,6 +1178,37 @@
                         }
 
                         return $row['last_seen_at'];
+                }
+
+                private function normalizeRecordingIndexTimestamp($value)
+                {
+                        if ($value === null) {
+                                return null;
+                        }
+
+                        $utc = new \DateTimeZone('UTC');
+
+                        if ($value instanceof \DateTimeInterface) {
+                                $normalized = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $value->format('Y-m-d H:i:s'), $utc);
+
+                                return $normalized ? $normalized->getTimestamp() : $value->getTimestamp();
+                        }
+
+                        $stringValue = (string) $value;
+
+                        if ($stringValue === '') {
+                                return null;
+                        }
+
+                        $parsed = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $stringValue, $utc);
+
+                        if ($parsed instanceof \DateTimeImmutable) {
+                                return $parsed->getTimestamp();
+                        }
+
+                        $fallback = strtotime($stringValue);
+
+                        return ($fallback !== false) ? $fallback : null;
                 }
 
                 public function renderRecordingRow($index, array $pathSegments, $downloadName, $otherparty, $datetime, $servicegroup, $callId, $description)
