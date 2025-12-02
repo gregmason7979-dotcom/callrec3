@@ -31,6 +31,13 @@ $uiTimezone = new DateTimeZone(date_default_timezone_get());
 $uiVersionLabel = (new DateTimeImmutable('@' . $uiVersionTimestamp))
     ->setTimezone($uiTimezone)
     ->format('d M Y h:i A T');
+
+$recordingSyncLabel = null;
+$lastRecordingSync = $model->getRecordingIndexLastSyncedAt();
+
+if ($lastRecordingSync instanceof DateTimeInterface) {
+    $recordingSyncLabel = $lastRecordingSync->format('d M Y h:i A T');
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">

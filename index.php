@@ -152,7 +152,14 @@ $(document).ready(function(){
                         success: function(response) {
                                 if (response && response.success) {
                                         var statsNote = formatSyncStats(response.stats);
-                                        setSyncStatus('Database synced with recordings' + statsNote + '.', 'success');
+                                        var syncedLabel = (response && response.lastSyncedAt) ? response.lastSyncedAt : null;
+                                        var syncMessage = 'Database synced with recordings' + statsNote + '.';
+
+                                        if (syncedLabel) {
+                                                syncMessage += ' Last synced at ' + syncedLabel + '.';
+                                        }
+
+                                        setSyncStatus(syncMessage, 'success');
                                         return;
                                 }
 
@@ -308,9 +315,15 @@ $(document).ready(function(){
                                    <div class="header_btm_cntr">
                                   <h2 class="header-note"><span class="header-note__icon" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm0 4a1.25 1.25 0 1 1-1.25 1.25A1.25 1.25 0 0 1 12 6Zm1.75 10.25a.75.75 0 0 1-1.5 0V12a.75.75 0 0 0-1.5 0 2.25 2.25 0 0 0 0 4.5.75.75 0 0 1 0 1.5 3.75 3.75 0 0 1 0-7.5 2.25 2.25 0 0 1 2.25 2.25Z"/></svg></span>Select agent name to see recordings</h2>
                                    </div>
-                                   <div class="header_btm_cntr header-sync">
+                                  <div class="header_btm_cntr header-sync">
                                   <button type="button" id="sync-recordings" class="header-sync__btn" aria-describedby="sync-status">Sync recordings</button>
-                                  <p class="header-sync__status" id="sync-status" role="status">Refreshes the recording index from the file system.</p>
+                                  <p class="header-sync__status" id="sync-status" role="status">
+<?php if ($recordingSyncLabel !== null): ?>
+Last synced at <?php echo htmlspecialchars($recordingSyncLabel, ENT_QUOTES, 'UTF-8'); ?>.
+<?php else: ?>
+No previous sync found. Click to build the index.
+<?php endif; ?>
+                                  </p>
                                    </div>
                                  </div>
                                  <div class="content">
