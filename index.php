@@ -152,7 +152,14 @@ $(document).ready(function(){
                         success: function(response) {
                                 if (response && response.success) {
                                         var statsNote = formatSyncStats(response.stats);
-                                        setSyncStatus('Database synced with recordings' + statsNote + '.', 'success');
+                                        var syncedLabel = (response && response.lastSyncedAt) ? response.lastSyncedAt : null;
+                                        var syncMessage = 'Database synced with recordings' + statsNote + '.';
+
+                                        if (syncedLabel) {
+                                                syncMessage += ' Last synced at ' + syncedLabel + '.';
+                                        }
+
+                                        setSyncStatus(syncMessage, 'success');
                                         return;
                                 }
 
@@ -308,9 +315,15 @@ $(document).ready(function(){
                                    <div class="header_btm_cntr">
                                   <h2 class="header-note"><span class="header-note__icon" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm0 4a1.25 1.25 0 1 1-1.25 1.25A1.25 1.25 0 0 1 12 6Zm1.75 10.25a.75.75 0 0 1-1.5 0V12a.75.75 0 0 0-1.5 0 2.25 2.25 0 0 0 0 4.5.75.75 0 0 1 0 1.5 3.75 3.75 0 0 1 0-7.5 2.25 2.25 0 0 1 2.25 2.25Z"/></svg></span>Select agent name to see recordings</h2>
                                    </div>
-                                   <div class="header_btm_cntr header-sync">
+                                  <div class="header_btm_cntr header-sync">
                                   <button type="button" id="sync-recordings" class="header-sync__btn" aria-describedby="sync-status">Sync recordings</button>
-                                  <p class="header-sync__status" id="sync-status" role="status">Refreshes the recording index from the file system.</p>
+                                  <p class="header-sync__status" id="sync-status" role="status">
+<?php if ($recordingSyncLabel !== null): ?>
+Last synced at <?php echo htmlspecialchars($recordingSyncLabel, ENT_QUOTES, 'UTF-8'); ?>.
+<?php else: ?>
+No previous sync found. Click to build the index.
+<?php endif; ?>
+                                  </p>
                                    </div>
                                  </div>
                                  <div class="content">
@@ -340,8 +353,20 @@ $(document).ready(function(){
                 'service_group' => $serviceGroupFilter,
                 'call_id' => $callIdFilter,
                 'start_date' => $startDateFilter,
-                'end_date' => $endDateFilter
+                'end_date' => $endDateFilter,
+                'agent' => $selectedAgentFilter,
         );
+
+        $agentRoster = $model->getAgentRoster();
+        $agentNameMap = array();
+
+        foreach ($agentRoster as $agentEntry) {
+                if (!isset($agentEntry['directory'])) {
+                        continue;
+                }
+
+                $agentNameMap[$agentEntry['directory']] = isset($agentEntry['displayName']) ? $agentEntry['displayName'] : $agentEntry['directory'];
+        }
 
         function recordingMatchesFilters($filters, $record)
         {
@@ -376,8 +401,8 @@ $(document).ready(function(){
         }
 
         if($actionType === '')
-	{
-	$rosterEntries = $model->getAgentRoster();
+        {
+        $rosterEntries = $agentRoster;
 ?>
         <table class="record-table record-table--roster">
           <colgroup>
@@ -450,9 +475,10 @@ $(document).ready(function(){
         </table>
 <?php
 }else{
-		$i=0;
-		$list_full = scandir($directory);
-		?>
+                $i=0;
+                $indexedResults = $model->searchIndexedRecordings($filters, 500);
+                $list_full = is_array($indexedResults) ? array() : scandir($directory);
+                ?>
     <table class="record-table">
                                            <tr class="table_top">
                                            <th width="300">Agent Name</th>
@@ -463,6 +489,49 @@ $(document).ready(function(){
                                                         <th>Description</th>
                                            </tr>
         <?php
+        if (is_array($indexedResults)) {
+                if (empty($indexedResults)) {
+        ?>
+        <tr class="table_row table_row--empty"><td colspan="6" class="table_cell--empty">No recordings matched your filters. Try relaxing the criteria.</td></tr>
+        <?php
+                } else {
+                        $grouped = array();
+
+                        foreach ($indexedResults as $record) {
+                                $agentKey = isset($record['agent']) ? $record['agent'] : '';
+                                $grouped[$agentKey][] = $record;
+                        }
+
+                        foreach ($grouped as $agentKey => $agentRecords) {
+                                $agentLabel = isset($agentNameMap[$agentKey]) ? $agentNameMap[$agentKey] : $agentKey;
+        ?>
+                                               <tr class="table_row table_row--agent"><td colspan="6" class="table_content">
+                                                 <span class="icon-chip icon-chip--chevron" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="m10.5 7.5 5 4.5-5 4.5a.75.75 0 0 1-1-.06.75.75 0 0 1 .06-1l3.63-3.27L9.56 8.56a.75.75 0 0 1 1-1.06Z"/></svg></span>
+                                                 <span class="icon-chip icon-chip--agent" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="M12 13.25a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 1.5c-3.51 0-6.5 1.92-6.5 4.5a.75.75 0 0 0 .75.75h11.5a.75.75 0 0 0 .75-.75c0-2.58-2.99-4.5-6.5-4.5Z"/></svg></span>
+                                                 <span class="table-link">
+                                                   <span class="table-link__label"><?php echo htmlspecialchars($agentLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+                                                   <span class="table-link__hint">Filtered results</span>
+                                                 </span>
+                                                 <span class="table-link__chevron" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                                               </td>
+                                          </tr>
+        <?php
+                                foreach ($agentRecords as $record) {
+                                        $i++;
+                                        echo $model->renderRecordingRow(
+                                                $i,
+                                                $record['segments'],
+                                                $record['downloadName'],
+                                                $record['otherparty'],
+                                                $record['datetime'],
+                                                $record['servicegroup'],
+                                                $record['callId'],
+                                                $record['description']
+                                        );
+                                }
+                        }
+                }
+        } else {
         foreach($list_full as $value_full)
         {
                 if (in_array($value_full,array(".",".."))) {
@@ -473,17 +542,28 @@ $(document).ready(function(){
                         continue;
                 }
 
-                $select        =       "select first_name,last_name from dbo.cc_user where id='".ltrim($value_full,'0')."'";
-                $query  =       sqlsrv_query(connect,$select);
+                $agentLabel = isset($agentNameMap[$value_full]) ? $agentNameMap[$value_full] : null;
 
-                if($query==true){
-                $result =       sqlsrv_fetch_array($query,SQLSRV_FETCH_ASSOC);
+                if ($agentLabel === null) {
+                        $select        =       "select first_name,last_name from dbo.cc_user where id='".ltrim($value_full,'0')."'";
+                        $query  =       sqlsrv_query(connect,$select);
+
+                        if($query==true){
+                        $result =       sqlsrv_fetch_array($query,SQLSRV_FETCH_ASSOC);
+                        $agentLabel = (isset($result['first_name']) ? $result['first_name'] . ' ' : '') . (isset($result['last_name']) ? $result['last_name'] : '');
+                        sqlsrv_free_stmt($query);
+                        }
+                }
+
+                if ($agentLabel === null || $agentLabel === '') {
+                        $agentLabel = $value_full;
+                }
         ?>
                                                <tr class="table_row table_row--agent"><td colspan="6" class="table_content">
                                                  <span class="icon-chip icon-chip--chevron" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="m10.5 7.5 5 4.5-5 4.5a.75.75 0 0 1-1-.06.75.75 0 0 1 .06-1l3.63-3.27L9.56 8.56a.75.75 0 0 1 1-1.06Z"/></svg></span>
                                                  <span class="icon-chip icon-chip--agent" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="M12 13.25a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 1.5c-3.51 0-6.5 1.92-6.5 4.5a.75.75 0 0 0 .75.75h11.5a.75.75 0 0 0 .75-.75c0-2.58-2.99-4.5-6.5-4.5Z"/></svg></span>
                                                  <span class="table-link">
-                                                   <span class="table-link__label"><?php echo $result['first_name'] ?> <?php echo $result['last_name']; ?></span>
+                                                   <span class="table-link__label"><?php echo htmlspecialchars($agentLabel, ENT_QUOTES, 'UTF-8'); ?></span>
                                                    <span class="table-link__hint">Filtered results</span>
                                                  </span>
                                                  <span class="table-link__chevron" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
