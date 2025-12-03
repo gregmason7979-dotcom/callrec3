@@ -384,7 +384,6 @@ $(document).ready(function(){
     <p class="lede">Indexed search keeps every agent, call, and tag at your fingertips. Syncs now run incrementally, so you can refresh the index between calls without waiting.</p>
     <div class="hero-actions">
       <button type="button" id="sync-recordings" class="primary" aria-describedby="sync-status">Run smart sync</button>
-      <a class="ghost" href="search.php">Advanced search</a>
     </div>
     <p class="hero-status" id="sync-status" role="status">
 <?php if ($recordingSyncLabel !== null): ?>
@@ -415,59 +414,15 @@ No previous sync found. Click to build the index.
   </div>
 </section>
 
-<section class="grid two modern-grid">
-  <div class="card filters">
-    <div class="filters__header">
-      <div>
-        <p class="eyebrow">Search</p>
-        <strong>Indexed results first, file scan fallback</strong>
-      </div>
-      <a class="ghost" href="search.php">Open full search</a>
+<section class="card stats stats--solo">
+  <div class="card__header">
+    <div>
+      <p class="eyebrow">Status</p>
+      <strong>Workspace health at a glance</strong>
     </div>
-    <form method="post" class="filters__form">
-      <input type="hidden" name="action" value="filter" />
-      <div class="filters__row">
-        <label for="agent">Agent</label>
-        <select id="agent" name="agent">
-          <option value="">All agents</option>
-<?php foreach ($agentRoster as $agentEntry): if (!isset($agentEntry['directory'])) { continue; } $directoryValue = $agentEntry['directory']; $agentLabel = isset($agentEntry['displayName']) ? $agentEntry['displayName'] : $agentEntry['directory']; ?>
-          <option value="<?php echo htmlspecialchars($directoryValue, ENT_QUOTES, 'UTF-8'); ?>" <?php echo ($selectedAgentFilter === $directoryValue) ? 'selected' : ''; ?>><?php echo htmlspecialchars($agentLabel, ENT_QUOTES, 'UTF-8'); ?></option>
-<?php endforeach; ?>
-        </select>
-      </div>
-      <div class="filters__row">
-        <label for="date">Date range</label>
-        <div class="filters__dates">
-          <input type="date" id="date" name="date" value="<?php echo htmlspecialchars($startDateFilter, ENT_QUOTES, 'UTF-8'); ?>" />
-          <span class="date-separator">to</span>
-          <input type="date" id="enddate" name="enddate" value="<?php echo htmlspecialchars($endDateFilter, ENT_QUOTES, 'UTF-8'); ?>" />
-        </div>
-      </div>
-      <div class="filters__row">
-        <label for="description">Contains</label>
-        <input type="text" id="description" name="name" placeholder="Customer name, notes, or tags" value="<?php echo htmlspecialchars($descriptionFilter, ENT_QUOTES, 'UTF-8'); ?>" />
-      </div>
-      <div class="filters__row filters__row--grid">
-        <div>
-          <label for="other_party">Other party</label>
-          <input type="text" id="other_party" name="other_party" placeholder="Other caller" value="<?php echo htmlspecialchars($otherPartyFilter, ENT_QUOTES, 'UTF-8'); ?>" />
-        </div>
-        <div>
-          <label for="service_group">Service group</label>
-          <input type="text" id="service_group" name="service_group" placeholder="Team or queue" value="<?php echo htmlspecialchars($serviceGroupFilter, ENT_QUOTES, 'UTF-8'); ?>" />
-        </div>
-        <div>
-          <label for="call_id">Call ID</label>
-          <input type="text" id="call_id" name="call_id" placeholder="Recording ID" value="<?php echo htmlspecialchars($callIdFilter, ENT_QUOTES, 'UTF-8'); ?>" />
-        </div>
-      </div>
-      <div class="filters__footer">
-        <div class="hint">Search hits the database index first to keep results instant.</div>
-        <button type="submit" class="primary">Search recordings</button>
-      </div>
-    </form>
+    <a class="button-link primary" href="search.php">Open full search</a>
   </div>
-  <div class="card stats">
+  <div class="stats">
     <div class="stat">
       <p class="eyebrow">Agents</p>
       <strong><?php echo count($agentRoster); ?></strong>
@@ -498,8 +453,7 @@ No previous sync found. Click to build the index.
       <strong><?php echo $actionType === '' ? 'Select an agent to see recordings' : 'Filtered results'; ?></strong>
     </div>
     <div class="pill-row">
-      <a class="pill" href="index.php">Show all agents</a>
-      <a class="pill" href="search.php">Open search</a>
+      <a class="button-link ghost" href="index.php">Show all agents</a>
     </div>
   </div>
   <div class="content modern-content">

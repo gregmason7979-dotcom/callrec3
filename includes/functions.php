@@ -1574,6 +1574,153 @@
                         sqlsrv_free_stmt($stmt);
                 }
 
+                private function getRecordedIndexStateLastSyncedAt()
+                {
+                        if (!$this->recordingIndexStateAvailable()) {
+                                return null;
+                        }
+
+                        $sql = "SELECT TOP 1 last_synced_at FROM dbo.recordings_index_state ORDER BY id DESC";
+                        $stmt = sqlsrv_query(connect, $sql);
+
+                        if ($stmt === false) {
+                                $this->logMessage('error', 'Failed to fetch recording index sync time', array('errors' => $this->collectSqlErrors()));
+
+                                return null;
+                        }
+
+                        $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
+                        sqlsrv_free_stmt($stmt);
+
+                        if (!is_array($row) || !isset($row['last_synced_at'])) {
+                                return null;
+                        }
+
+                        return $row['last_synced_at'];
+                }
+
+                private function normalizeRecordingIndexTimestamp($value)
+                {
+                        if ($value === null) {
+                                return null;
+                        }
+
+                        $utc = new \DateTimeZone('UTC');
+
+                        if ($value instanceof \DateTimeInterface) {
+                                $normalized = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $value->format('Y-m-d H:i:s'), $utc);
+
+                                return $normalized ? $normalized->getTimestamp() : $value->getTimestamp();
+                        }
+
+                        $stringValue = (string) $value;
+
+                        if ($stringValue === '') {
+                                return null;
+                        }
+
+                        $parsed = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $stringValue, $utc);
+
+                        if ($parsed instanceof \DateTimeImmutable) {
+                                return $parsed->getTimestamp();
+                        }
+
+                        $fallback = strtotime($stringValue);
+
+                        return ($fallback !== false) ? $fallback : null;
+                }
+
+                private function normalizeUtcToLocalDateTime($value)
+                {
+                        $localTimezone = new \DateTimeZone(date_default_timezone_get());
+
+                        if ($value instanceof \DateTimeInterface) {
+                                $normalized = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $value->format('Y-m-d H:i:s'), new \DateTimeZone('UTC'));
+
+                                return $normalized ? $normalized->setTimezone($localTimezone) : $value->setTimezone($localTimezone);
+                        }
+
+                        $parsed = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', (string) $value, new \DateTimeZone('UTC'));
+
+                        if ($parsed instanceof \DateTimeImmutable) {
+                                return $parsed->setTimezone($localTimezone);
+                        }
+
+                        $timestamp = strtotime((string) $value);
+
+                        if ($timestamp !== false) {
+                                return (new \DateTimeImmutable('@' . $timestamp))->setTimezone($localTimezone);
+                        }
+
+                        return null;
+                }
+
+                private function ensureRecordingIndexStateTable()
+                {
+                        $sql = "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'recordings_index_state')\n"
+                             . "BEGIN\n"
+                             . "    CREATE TABLE dbo.recordings_index_state (\n"
+                             . "        id INT IDENTITY(1,1) PRIMARY KEY,\n"
+                             . "        last_synced_at DATETIME2 NOT NULL,\n"
+                             . "        mode NVARCHAR(20) NULL\n"
+                             . "    );\n"
+                             . "END";
+
+                        $query = sqlsrv_query(connect, $sql);
+
+                        if ($query === false) {
+                                $this->logMessage('error', 'Failed to ensure recordings_index_state table exists', array('errors' => $this->collectSqlErrors()));
+                        }
+
+                        if (is_resource($query)) {
+                                sqlsrv_free_stmt($query);
+                        }
+                }
+
+                private function recordingIndexStateAvailable()
+                {
+                        $sql = "SELECT 1 FROM sys.tables WHERE name = 'recordings_index_state'";
+                        $query = sqlsrv_query(connect, $sql);
+
+                        if ($query === false) {
+                                return false;
+                        }
+
+                        $exists = sqlsrv_fetch_array($query) !== null;
+                        sqlsrv_free_stmt($query);
+
+                        return $exists;
+                }
+
+                private function recordRecordingIndexSyncTime($syncTimeUtc, $mode)
+                {
+                        if ($syncTimeUtc === null) {
+                                return;
+                        }
+
+                        if (!$this->recordingIndexStateAvailable()) {
+                                return;
+                        }
+
+                        $sql = "MERGE dbo.recordings_index_state WITH (HOLDLOCK) AS target\n"
+                             . "USING (SELECT 1 AS anchor) AS src\n"
+                             . "ON target.id = 1\n"
+                             . "WHEN MATCHED THEN\n"
+                             . "    UPDATE SET last_synced_at = ?, mode = ?\n"
+                             . "WHEN NOT MATCHED THEN\n"
+                             . "    INSERT (last_synced_at, mode) VALUES (?, ?);";
+
+                        $params = array($syncTimeUtc, $mode, $syncTimeUtc, $mode);
+                        $stmt = sqlsrv_query(connect, $sql, $params);
+
+                        if ($stmt === false) {
+                                $this->logMessage('error', 'Failed to record recording index sync time', array('errors' => $this->collectSqlErrors()));
+                                return;
+                        }
+
+                        sqlsrv_free_stmt($stmt);
+                }
+
                 private function normalizeRecordingIndexTimestamp($value)
                 {
                         if ($value === null) {
