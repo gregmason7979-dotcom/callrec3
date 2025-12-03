@@ -303,32 +303,8 @@ $(document).ready(function(){
 
   	
 
-<div class="outerlayer">
-                      <div class="outerlayer1">
-                             <div class="header_botm">
-                                   <div class="header_btm_lft">
-                                    <h2><a class="header-link" href="index.php"><span class="header-link__icon" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="M16 11a3 3 0 1 0-3-3 3 3 0 0 0 3 3Zm-8 0a3 3 0 1 0-3-3 3 3 0 0 0 3 3Zm0 2.5a4.5 4.5 0 0 0-4.5 4.5.75.75 0 0 0 .75.75h7.5a.75.75 0 0 0 .75-.75A4.5 4.5 0 0 0 8 13.5Zm8 0a4.49 4.49 0 0 0-2.73.9 5.72 5.72 0 0 1 1.98 3.6.75.75 0 0 0 .75.75h5a.75.75 0 0 0 .75-.75A4.5 4.5 0 0 0 16 13.5Z"/></svg></span><span>Show all Agents</span></a></h2>
-                                   </div>
-                                   <div class="header_btm_cntr">
-                                  <h2><a class="header-link" href="search.php"><span class="header-link__icon" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="m20.29 19.58-3.89-3.89a7.25 7.25 0 1 0-1.06 1.06l3.89 3.89a.75.75 0 1 0 1.06-1.06ZM6.75 11a4.25 4.25 0 1 1 4.25 4.25A4.25 4.25 0 0 1 6.75 11Z"/></svg></span><span>Search</span></a></h2>
-                                   </div>
-                                   <div class="header_btm_cntr">
-                                  <h2 class="header-note"><span class="header-note__icon" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm0 4a1.25 1.25 0 1 1-1.25 1.25A1.25 1.25 0 0 1 12 6Zm1.75 10.25a.75.75 0 0 1-1.5 0V12a.75.75 0 0 0-1.5 0 2.25 2.25 0 0 0 0 4.5.75.75 0 0 1 0 1.5 3.75 3.75 0 0 1 0-7.5 2.25 2.25 0 0 1 2.25 2.25Z"/></svg></span>Select agent name to see recordings</h2>
-                                   </div>
-                                  <div class="header_btm_cntr header-sync">
-                                  <button type="button" id="sync-recordings" class="header-sync__btn" aria-describedby="sync-status">Sync recordings</button>
-                                  <p class="header-sync__status" id="sync-status" role="status">
-<?php if ($recordingSyncLabel !== null): ?>
-Last synced at <?php echo htmlspecialchars($recordingSyncLabel, ENT_QUOTES, 'UTF-8'); ?>.
-<?php else: ?>
-No previous sync found. Click to build the index.
-<?php endif; ?>
-                                  </p>
-                                   </div>
-                                 </div>
-                                 <div class="content">
 <?php
-        $directory = rtrim(maindirectory, '/\\') . DIRECTORY_SEPARATOR;
+        $directory = rtrim(maindirectory, '/') . DIRECTORY_SEPARATOR;
         $selectedAgentFilter = (isset($_POST['agent']) && is_string($_POST['agent'])) ? $_POST['agent'] : '';
         $actionType = (isset($_POST['action']) && is_string($_POST['action'])) ? $_POST['action'] : '';
         $descriptionFilter = isset($_POST['name']) ? trim((string) $_POST['name']) : '';
@@ -399,7 +375,135 @@ No previous sync found. Click to build the index.
 
                 return $descriptionMatch && $otherPartyMatch && $serviceGroupMatch && $callIdMatch && $dateMatch;
         }
+?>
 
+<section class="hero hero--with-actions">
+  <div>
+    <p class="eyebrow"><?php echo $recordingSyncLabel !== null ? 'Last synced ' . htmlspecialchars($recordingSyncLabel, ENT_QUOTES, 'UTF-8') : 'Index not synced yet'; ?></p>
+    <h1>Find recordings in milliseconds.</h1>
+    <p class="lede">Indexed search keeps every agent, call, and tag at your fingertips. Syncs now run incrementally, so you can refresh the index between calls without waiting.</p>
+    <div class="hero-actions">
+      <button type="button" id="sync-recordings" class="primary" aria-describedby="sync-status">Run smart sync</button>
+      <a class="ghost" href="search.php">Advanced search</a>
+    </div>
+    <p class="hero-status" id="sync-status" role="status">
+<?php if ($recordingSyncLabel !== null): ?>
+Database synced with recordings. Last synced at <?php echo htmlspecialchars($recordingSyncLabel, ENT_QUOTES, 'UTF-8'); ?>.
+<?php else: ?>
+No previous sync found. Click to build the index.
+<?php endif; ?>
+    </p>
+  </div>
+  <div class="hero-card">
+    <div class="hero-card__row">
+      <span>Agents</span>
+      <strong><?php echo count($agentRoster); ?></strong>
+    </div>
+    <div class="hero-card__progress">
+      <span style="width: 78%"></span>
+    </div>
+    <div class="hero-card__meta">
+      <div>
+        <p class="eyebrow">Search mode</p>
+        <strong><?php echo $actionType === '' ? 'Browse roster' : 'Filtered results'; ?></strong>
+      </div>
+      <div>
+        <p class="eyebrow">Sync status</p>
+        <strong><?php echo $recordingSyncLabel !== null ? 'Up to date' : 'Pending'; ?></strong>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="grid two modern-grid">
+  <div class="card filters">
+    <div class="filters__header">
+      <div>
+        <p class="eyebrow">Search</p>
+        <strong>Indexed results first, file scan fallback</strong>
+      </div>
+      <a class="ghost" href="search.php">Open full search</a>
+    </div>
+    <form method="post" class="filters__form">
+      <input type="hidden" name="action" value="filter" />
+      <div class="filters__row">
+        <label for="agent">Agent</label>
+        <select id="agent" name="agent">
+          <option value="">All agents</option>
+<?php foreach ($agentRoster as $agentEntry): if (!isset($agentEntry['directory'])) { continue; } $directoryValue = $agentEntry['directory']; $agentLabel = isset($agentEntry['displayName']) ? $agentEntry['displayName'] : $agentEntry['directory']; ?>
+          <option value="<?php echo htmlspecialchars($directoryValue, ENT_QUOTES, 'UTF-8'); ?>" <?php echo ($selectedAgentFilter === $directoryValue) ? 'selected' : ''; ?>><?php echo htmlspecialchars($agentLabel, ENT_QUOTES, 'UTF-8'); ?></option>
+<?php endforeach; ?>
+        </select>
+      </div>
+      <div class="filters__row">
+        <label for="date">Date range</label>
+        <div class="filters__dates">
+          <input type="date" id="date" name="date" value="<?php echo htmlspecialchars($startDateFilter, ENT_QUOTES, 'UTF-8'); ?>" />
+          <span class="date-separator">to</span>
+          <input type="date" id="enddate" name="enddate" value="<?php echo htmlspecialchars($endDateFilter, ENT_QUOTES, 'UTF-8'); ?>" />
+        </div>
+      </div>
+      <div class="filters__row">
+        <label for="description">Contains</label>
+        <input type="text" id="description" name="name" placeholder="Customer name, notes, or tags" value="<?php echo htmlspecialchars($descriptionFilter, ENT_QUOTES, 'UTF-8'); ?>" />
+      </div>
+      <div class="filters__row filters__row--grid">
+        <div>
+          <label for="other_party">Other party</label>
+          <input type="text" id="other_party" name="other_party" placeholder="Other caller" value="<?php echo htmlspecialchars($otherPartyFilter, ENT_QUOTES, 'UTF-8'); ?>" />
+        </div>
+        <div>
+          <label for="service_group">Service group</label>
+          <input type="text" id="service_group" name="service_group" placeholder="Team or queue" value="<?php echo htmlspecialchars($serviceGroupFilter, ENT_QUOTES, 'UTF-8'); ?>" />
+        </div>
+        <div>
+          <label for="call_id">Call ID</label>
+          <input type="text" id="call_id" name="call_id" placeholder="Recording ID" value="<?php echo htmlspecialchars($callIdFilter, ENT_QUOTES, 'UTF-8'); ?>" />
+        </div>
+      </div>
+      <div class="filters__footer">
+        <div class="hint">Search hits the database index first to keep results instant.</div>
+        <button type="submit" class="primary">Search recordings</button>
+      </div>
+    </form>
+  </div>
+  <div class="card stats">
+    <div class="stat">
+      <p class="eyebrow">Agents</p>
+      <strong><?php echo count($agentRoster); ?></strong>
+      <span class="trend neutral">Active directories</span>
+    </div>
+    <div class="stat">
+      <p class="eyebrow">Sync state</p>
+      <strong><?php echo $recordingSyncLabel !== null ? 'Healthy' : 'Pending'; ?></strong>
+      <span class="trend <?php echo $recordingSyncLabel !== null ? 'up' : 'neutral'; ?>"><?php echo $recordingSyncLabel !== null ? 'Indexed' : 'Needs sync'; ?></span>
+    </div>
+    <div class="stat">
+      <p class="eyebrow">Viewing</p>
+      <strong><?php echo $actionType === '' ? 'All agents' : 'Filtered'; ?></strong>
+      <span class="trend neutral">Click an agent to expand</span>
+    </div>
+    <div class="stat">
+      <p class="eyebrow">Workspace</p>
+      <strong>Secure</strong>
+      <span class="trend up">Session active</span>
+    </div>
+  </div>
+</section>
+
+<section class="card recordings">
+  <div class="card__header">
+    <div>
+      <p class="eyebrow">Agent activity</p>
+      <strong><?php echo $actionType === '' ? 'Select an agent to see recordings' : 'Filtered results'; ?></strong>
+    </div>
+    <div class="pill-row">
+      <a class="pill" href="index.php">Show all agents</a>
+      <a class="pill" href="search.php">Open search</a>
+    </div>
+  </div>
+  <div class="content modern-content">
+<?php
         if($actionType === '')
         {
         $rosterEntries = $agentRoster;
@@ -722,10 +826,7 @@ No previous sync found. Click to build the index.
                                         </table>
 
         <?php } ?>
-                                        <div class="content_end">
-                                        </div>
-                                 </div>
-			  </div>
-		   </div>
-		 
-<?php include('includes/footer.php'); ?> 
+  </div>
+</section>
+
+<?php include('includes/footer.php'); ?>

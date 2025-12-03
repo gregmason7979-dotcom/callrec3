@@ -1,9 +1,11 @@
 <?php include('config.php'); ?>
 <?php
 $recordCssPath = __DIR__ . '/../css/record_style.css';
+$modernCssPath = __DIR__ . '/../css/modern-example.css';
 $recordCssVersion = file_exists($recordCssPath) ? filemtime($recordCssPath) : time();
+$modernCssVersion = file_exists($modernCssPath) ? filemtime($modernCssPath) : time();
 
-$uiVersionTimestamp = $recordCssVersion;
+$uiVersionTimestamp = max($recordCssVersion, $modernCssVersion);
 $uiVersionFiles = array(
     __DIR__ . '/../index.php',
     __DIR__ . '/functions.php',
@@ -46,19 +48,28 @@ if ($lastRecordingSync instanceof DateTimeInterface) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Recorded Calls</title>
 <link rel="stylesheet" href="css/record_style.css?v=<?php echo $recordCssVersion; ?>">
+<link rel="stylesheet" href="css/modern-example.css?v=<?php echo $modernCssVersion; ?>">
 </head>
-<body>
-  <div class="app-shell">
-    <header class="app-header">
-      <div class="app-header__inner">
-        <h1 class="app-header__title">Recorded Calls</h1>
-        <p class="app-header__subtitle">Review, monitor, and download conversations.</p>
-        <p class="app-header__meta">Last updated <?php echo htmlspecialchars($uiVersionLabel, ENT_QUOTES, 'UTF-8'); ?></p>
-        <nav class="app-nav" aria-label="Primary">
-          <span class="app-nav__welcome">Welcome</span>
-          <span class="app-nav__status"><span class="app-nav__status-dot" aria-hidden="true"></span>Secure Workspace</span>
-          <a class="logout-link" href="logout.php">Logout</a>
-        </nav>
+<body class="modern-body">
+  <div class="app-shell modern-shell">
+    <header class="app-header modern-header">
+      <div class="brand">
+        <div class="logo">CR</div>
+        <div class="brand-text">
+          <span class="eyebrow">Call Recorder</span>
+          <strong>Operations Console</strong>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="sync-pill" aria-live="polite">
+          <span class="dot <?php echo $recordingSyncLabel !== null ? 'live' : ''; ?>"></span>
+          <span class="label"><?php echo $recordingSyncLabel !== null ? 'Index healthy' : 'Index unavailable'; ?></span>
+        </div>
+        <div class="header-meta">
+          <p class="eyebrow">UI updated</p>
+          <strong><?php echo htmlspecialchars($uiVersionLabel, ENT_QUOTES, 'UTF-8'); ?></strong>
+        </div>
+        <a class="ghost" href="logout.php">Logout</a>
       </div>
     </header>
-    <main class="app-main">
+    <main class="app-main modern-main">
