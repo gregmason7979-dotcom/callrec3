@@ -152,7 +152,14 @@ $(document).ready(function(){
                         success: function(response) {
                                 if (response && response.success) {
                                         var statsNote = formatSyncStats(response.stats);
-                                        setSyncStatus('Database synced with recordings' + statsNote + '.', 'success');
+                                        var syncedLabel = (response && response.lastSyncedAt) ? response.lastSyncedAt : null;
+                                        var syncMessage = 'Database synced with recordings' + statsNote + '.';
+
+                                        if (syncedLabel) {
+                                                syncMessage += ' Last synced at ' + syncedLabel + '.';
+                                        }
+
+                                        setSyncStatus(syncMessage, 'success');
                                         return;
                                 }
 
@@ -296,26 +303,8 @@ $(document).ready(function(){
 
   	
 
-<div class="outerlayer">
-                      <div class="outerlayer1">
-                             <div class="header_botm">
-                                   <div class="header_btm_lft">
-                                    <h2><a class="header-link" href="index.php"><span class="header-link__icon" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="M16 11a3 3 0 1 0-3-3 3 3 0 0 0 3 3Zm-8 0a3 3 0 1 0-3-3 3 3 0 0 0 3 3Zm0 2.5a4.5 4.5 0 0 0-4.5 4.5.75.75 0 0 0 .75.75h7.5a.75.75 0 0 0 .75-.75A4.5 4.5 0 0 0 8 13.5Zm8 0a4.49 4.49 0 0 0-2.73.9 5.72 5.72 0 0 1 1.98 3.6.75.75 0 0 0 .75.75h5a.75.75 0 0 0 .75-.75A4.5 4.5 0 0 0 16 13.5Z"/></svg></span><span>Show all Agents</span></a></h2>
-                                   </div>
-                                   <div class="header_btm_cntr">
-                                  <h2><a class="header-link" href="search.php"><span class="header-link__icon" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="m20.29 19.58-3.89-3.89a7.25 7.25 0 1 0-1.06 1.06l3.89 3.89a.75.75 0 1 0 1.06-1.06ZM6.75 11a4.25 4.25 0 1 1 4.25 4.25A4.25 4.25 0 0 1 6.75 11Z"/></svg></span><span>Search</span></a></h2>
-                                   </div>
-                                   <div class="header_btm_cntr">
-                                  <h2 class="header-note"><span class="header-note__icon" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm0 4a1.25 1.25 0 1 1-1.25 1.25A1.25 1.25 0 0 1 12 6Zm1.75 10.25a.75.75 0 0 1-1.5 0V12a.75.75 0 0 0-1.5 0 2.25 2.25 0 0 0 0 4.5.75.75 0 0 1 0 1.5 3.75 3.75 0 0 1 0-7.5 2.25 2.25 0 0 1 2.25 2.25Z"/></svg></span>Select agent name to see recordings</h2>
-                                   </div>
-                                   <div class="header_btm_cntr header-sync">
-                                  <button type="button" id="sync-recordings" class="header-sync__btn" aria-describedby="sync-status">Sync recordings</button>
-                                  <p class="header-sync__status" id="sync-status" role="status">Refreshes the recording index from the file system.</p>
-                                   </div>
-                                 </div>
-                                 <div class="content">
 <?php
-        $directory = rtrim(maindirectory, '/\\') . DIRECTORY_SEPARATOR;
+        $directory = rtrim(maindirectory, '/') . DIRECTORY_SEPARATOR;
         $selectedAgentFilter = (isset($_POST['agent']) && is_string($_POST['agent'])) ? $_POST['agent'] : '';
         $actionType = (isset($_POST['action']) && is_string($_POST['action'])) ? $_POST['action'] : '';
         $descriptionFilter = isset($_POST['name']) ? trim((string) $_POST['name']) : '';
@@ -340,8 +329,20 @@ $(document).ready(function(){
                 'service_group' => $serviceGroupFilter,
                 'call_id' => $callIdFilter,
                 'start_date' => $startDateFilter,
-                'end_date' => $endDateFilter
+                'end_date' => $endDateFilter,
+                'agent' => $selectedAgentFilter,
         );
+
+        $agentRoster = $model->getAgentRoster();
+        $agentNameMap = array();
+
+        foreach ($agentRoster as $agentEntry) {
+                if (!isset($agentEntry['directory'])) {
+                        continue;
+                }
+
+                $agentNameMap[$agentEntry['directory']] = isset($agentEntry['displayName']) ? $agentEntry['displayName'] : $agentEntry['directory'];
+        }
 
         function recordingMatchesFilters($filters, $record)
         {
@@ -374,10 +375,94 @@ $(document).ready(function(){
 
                 return $descriptionMatch && $otherPartyMatch && $serviceGroupMatch && $callIdMatch && $dateMatch;
         }
+?>
 
+<section class="hero hero--with-actions">
+  <div>
+    <p class="eyebrow"><?php echo $recordingSyncLabel !== null ? 'Last synced ' . htmlspecialchars($recordingSyncLabel, ENT_QUOTES, 'UTF-8') : 'Index not synced yet'; ?></p>
+    <h1>Find recordings in milliseconds.</h1>
+    <p class="lede">Indexed search keeps every agent, call, and tag at your fingertips. Syncs now run incrementally, so you can refresh the index between calls without waiting.</p>
+    <div class="hero-actions">
+      <button type="button" id="sync-recordings" class="primary" aria-describedby="sync-status">Run smart sync</button>
+      <a class="ghost" href="search.php">Advanced search</a>
+    </div>
+    <p class="hero-status" id="sync-status" role="status">
+<?php if ($recordingSyncLabel !== null): ?>
+Database synced with recordings. Last synced at <?php echo htmlspecialchars($recordingSyncLabel, ENT_QUOTES, 'UTF-8'); ?>.
+<?php else: ?>
+No previous sync found. Click to build the index.
+<?php endif; ?>
+    </p>
+  </div>
+  <div class="hero-card">
+    <div class="hero-card__row">
+      <span>Agents</span>
+      <strong><?php echo count($agentRoster); ?></strong>
+    </div>
+    <div class="hero-card__progress">
+      <span style="width: 78%"></span>
+    </div>
+    <div class="hero-card__meta">
+      <div>
+        <p class="eyebrow">Search mode</p>
+        <strong><?php echo $actionType === '' ? 'Browse roster' : 'Filtered results'; ?></strong>
+      </div>
+      <div>
+        <p class="eyebrow">Sync status</p>
+        <strong><?php echo $recordingSyncLabel !== null ? 'Up to date' : 'Pending'; ?></strong>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="card stats stats--solo">
+  <div class="card__header">
+    <div>
+      <p class="eyebrow">Status</p>
+      <strong>Workspace health at a glance</strong>
+    </div>
+    <a class="ghost" href="search.php">Open full search</a>
+  </div>
+  <div class="stats">
+    <div class="stat">
+      <p class="eyebrow">Agents</p>
+      <strong><?php echo count($agentRoster); ?></strong>
+      <span class="trend neutral">Active directories</span>
+    </div>
+    <div class="stat">
+      <p class="eyebrow">Sync state</p>
+      <strong><?php echo $recordingSyncLabel !== null ? 'Healthy' : 'Pending'; ?></strong>
+      <span class="trend <?php echo $recordingSyncLabel !== null ? 'up' : 'neutral'; ?>"><?php echo $recordingSyncLabel !== null ? 'Indexed' : 'Needs sync'; ?></span>
+    </div>
+    <div class="stat">
+      <p class="eyebrow">Viewing</p>
+      <strong><?php echo $actionType === '' ? 'All agents' : 'Filtered'; ?></strong>
+      <span class="trend neutral">Click an agent to expand</span>
+    </div>
+    <div class="stat">
+      <p class="eyebrow">Workspace</p>
+      <strong>Secure</strong>
+      <span class="trend up">Session active</span>
+    </div>
+  </div>
+</section>
+
+<section class="card recordings">
+  <div class="card__header">
+    <div>
+      <p class="eyebrow">Agent activity</p>
+      <strong><?php echo $actionType === '' ? 'Select an agent to see recordings' : 'Filtered results'; ?></strong>
+    </div>
+    <div class="pill-row">
+      <a class="pill" href="index.php">Show all agents</a>
+      <a class="pill" href="search.php">Open search</a>
+    </div>
+  </div>
+  <div class="content modern-content">
+<?php
         if($actionType === '')
-	{
-	$rosterEntries = $model->getAgentRoster();
+        {
+        $rosterEntries = $agentRoster;
 ?>
         <table class="record-table record-table--roster">
           <colgroup>
@@ -450,9 +535,17 @@ $(document).ready(function(){
         </table>
 <?php
 }else{
-		$i=0;
-		$list_full = scandir($directory);
-		?>
+                $i=0;
+                $indexedResults = $model->searchIndexedRecordings($filters, 500);
+                $hasIndexedResults = is_array($indexedResults) && count($indexedResults) > 0;
+                $useFilesystemFallback = !is_array($indexedResults) || !$hasIndexedResults;
+                $list_full = $useFilesystemFallback ? scandir($directory) : array();
+
+                if (!is_array($list_full)) {
+                        $list_full = array();
+                }
+                $resultsRendered = false;
+                ?>
     <table class="record-table">
                                            <tr class="table_top">
                                            <th width="300">Agent Name</th>
@@ -463,6 +556,51 @@ $(document).ready(function(){
                                                         <th>Description</th>
                                            </tr>
         <?php
+        if ($hasIndexedResults) {
+                $grouped = array();
+
+                foreach ($indexedResults as $record) {
+                        $agentKey = isset($record['agent']) ? $record['agent'] : '';
+                        $grouped[$agentKey][] = $record;
+                }
+
+                foreach ($grouped as $agentKey => $agentRecords) {
+                        $agentLabel = isset($agentNameMap[$agentKey]) ? $agentNameMap[$agentKey] : $agentKey;
+        ?>
+                                              <tr class="table_row table_row--agent"><td colspan="6" class="table_content">
+                                                 <span class="icon-chip icon-chip--chevron" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="m10.5 7.5 5 4.5-5 4.5a.75.75 0 0 1-1-.06.75.75 0 0 1 .06-1l3.63-3.27L9.56 8.56a.75.75 0 0 1 1-1.06Z"/></svg></span>
+                                                 <span class="icon-chip icon-chip--agent" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="M12 13.25a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 1.5c-3.51 0-6.5 1.92-6.5 4.5a.75.75 0 0 0 .75.75h11.5a.75.75 0 0 0 .75-.75c0-2.58-2.99-4.5-6.5-4.5Z"/></svg></span>
+                                                 <span class="table-link">
+                                                   <span class="table-link__label"><?php echo htmlspecialchars($agentLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+                                                   <span class="table-link__hint">Filtered results</span>
+                                                 </span>
+                                                 <span class="table-link__chevron" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                                               </td>
+                                          </tr>
+        <?php
+                        foreach ($agentRecords as $record) {
+                                $i++;
+                                $resultsRendered = true;
+                                echo $model->renderRecordingRow(
+                                        $i,
+                                        $record['segments'],
+                                        $record['downloadName'],
+                                        $record['otherparty'],
+                                        $record['datetime'],
+                                        $record['servicegroup'],
+                                        $record['callId'],
+                                        $record['description']
+                                );
+                        }
+                }
+        }
+
+        if ($useFilesystemFallback) {
+                if ($hasIndexedResults === false && is_array($indexedResults)) {
+        ?>
+        <tr class="table_row table_row--empty"><td colspan="6" class="table_cell--empty">No indexed results were found. Showing filesystem scan instead.</td></tr>
+        <?php
+                }
         foreach($list_full as $value_full)
         {
                 if (in_array($value_full,array(".",".."))) {
@@ -473,17 +611,28 @@ $(document).ready(function(){
                         continue;
                 }
 
-                $select        =       "select first_name,last_name from dbo.cc_user where id='".ltrim($value_full,'0')."'";
-                $query  =       sqlsrv_query(connect,$select);
+                $agentLabel = isset($agentNameMap[$value_full]) ? $agentNameMap[$value_full] : null;
 
-                if($query==true){
-                $result =       sqlsrv_fetch_array($query,SQLSRV_FETCH_ASSOC);
+                if ($agentLabel === null) {
+                        $select        =       "select first_name,last_name from dbo.cc_user where id='".ltrim($value_full,'0')."'";
+                        $query  =       sqlsrv_query(connect,$select);
+
+                        if($query==true){
+                        $result =       sqlsrv_fetch_array($query,SQLSRV_FETCH_ASSOC);
+                        $agentLabel = (isset($result['first_name']) ? $result['first_name'] . ' ' : '') . (isset($result['last_name']) ? $result['last_name'] : '');
+                        sqlsrv_free_stmt($query);
+                        }
+                }
+
+                if ($agentLabel === null || $agentLabel === '') {
+                        $agentLabel = $value_full;
+                }
         ?>
                                                <tr class="table_row table_row--agent"><td colspan="6" class="table_content">
                                                  <span class="icon-chip icon-chip--chevron" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="m10.5 7.5 5 4.5-5 4.5a.75.75 0 0 1-1-.06.75.75 0 0 1 .06-1l3.63-3.27L9.56 8.56a.75.75 0 0 1 1-1.06Z"/></svg></span>
                                                  <span class="icon-chip icon-chip--agent" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="M12 13.25a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 1.5c-3.51 0-6.5 1.92-6.5 4.5a.75.75 0 0 0 .75.75h11.5a.75.75 0 0 0 .75-.75c0-2.58-2.99-4.5-6.5-4.5Z"/></svg></span>
                                                  <span class="table-link">
-                                                   <span class="table-link__label"><?php echo $result['first_name'] ?> <?php echo $result['last_name']; ?></span>
+                                                   <span class="table-link__label"><?php echo htmlspecialchars($agentLabel, ENT_QUOTES, 'UTF-8'); ?></span>
                                                    <span class="table-link__hint">Filtered results</span>
                                                  </span>
                                                  <span class="table-link__chevron" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path fill="currentColor" d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
@@ -541,6 +690,7 @@ $(document).ready(function(){
                                                         foreach($unew_array as $uuval)
                                                         {
                                                                 $i++;
+                                                                $resultsRendered = true;
                                                                 $uuplay =       $directory.$value_full.DIRECTORY_SEPARATOR.$value['file'].DIRECTORY_SEPARATOR.$uuval;
 
                                                                 if(!is_file($uuplay)) {
@@ -595,14 +745,15 @@ $(document).ready(function(){
 
                         if(is_array($new_array))
                         {
-                                foreach($new_array as $val)
-                                {
-                                        $i++;
-                                        $play   =       $directory.$value_full.DIRECTORY_SEPARATOR.$val;
-                                        $explode        =       explode('$',$val);
-                                        $servicegroup   =       $explode[0];
-                                        $datetime               =       $explode[1];
-                                        $description    =       $explode[3];
+                                        foreach($new_array as $val)
+                                        {
+                                                $i++;
+                                                $resultsRendered = true;
+                                                $play   =       $directory.$value_full.DIRECTORY_SEPARATOR.$val;
+                                                $explode        =       explode('$',$val);
+                                                $servicegroup   =       $explode[0];
+                                                $datetime               =       $explode[1];
+                                                $description    =       $explode[3];
                                         $otherparty             =       $explode[2];
                                         $callid                 =       $explode[4];
                                         $call                   =       explode('.',$callid);
@@ -621,14 +772,17 @@ $(document).ready(function(){
                         }
                 }
         }
+
+        if (!$resultsRendered) {
+        ?>
+        <tr class="table_row table_row--empty"><td colspan="6" class="table_cell--empty">No recordings matched your filters. Try relaxing the criteria.</td></tr>
+        <?php
+        }
         ?>
                                         </table>
 
         <?php } ?>
-                                        <div class="content_end">
-                                        </div>
-                                 </div>
-			  </div>
-		   </div>
-		 
-<?php include('includes/footer.php'); ?> 
+  </div>
+</section>
+
+<?php include('includes/footer.php'); ?>
