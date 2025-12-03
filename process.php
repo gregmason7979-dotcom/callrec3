@@ -21,7 +21,12 @@ if (isset($_POST['action']) && $_POST['action'] === 'sync_index')
 
         $stats = $model->runRecordingIndexer(null, 'incremental');
 
-        echo json_encode(array('success' => true, 'stats' => $stats));
+        $lastSyncedAt = $model->getRecordingIndexLastSyncedAt();
+        $lastSyncedLabel = ($lastSyncedAt instanceof DateTimeInterface)
+                ? $lastSyncedAt->format('d M Y h:i A T')
+                : null;
+
+        echo json_encode(array('success' => true, 'stats' => $stats, 'lastSyncedAt' => $lastSyncedLabel));
         exit;
 }
 ?>
