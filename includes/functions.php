@@ -1574,6 +1574,68 @@
                         sqlsrv_free_stmt($stmt);
                 }
 
+                private function normalizeRecordingIndexTimestamp($value)
+                {
+                        if ($value === null) {
+                                return null;
+                        }
+
+                        $utc = new \DateTimeZone('UTC');
+
+                        if ($value instanceof \DateTimeInterface) {
+                                $normalized = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $value->format('Y-m-d H:i:s'), $utc);
+
+                                return $normalized ? $normalized->getTimestamp() : $value->getTimestamp();
+                        }
+
+                        $stringValue = (string) $value;
+
+                        if ($stringValue === '') {
+                                return null;
+                        }
+
+                        $parsed = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $stringValue, $utc);
+
+                        if ($parsed instanceof \DateTimeImmutable) {
+                                return $parsed->getTimestamp();
+                        }
+
+                        $fallback = strtotime($stringValue);
+
+                        return ($fallback !== false) ? $fallback : null;
+                }
+
+                private function normalizeRecordingIndexTimestamp($value)
+                {
+                        if ($value === null) {
+                                return null;
+                        }
+
+                        $utc = new \DateTimeZone('UTC');
+
+                        if ($value instanceof \DateTimeInterface) {
+                                $normalized = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $value->format('Y-m-d H:i:s'), $utc);
+
+                                return $normalized ? $normalized->getTimestamp() : $value->getTimestamp();
+                        }
+
+                        $stringValue = (string) $value;
+
+                        if ($stringValue === '') {
+                                return null;
+                        }
+
+                        $parsed = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $stringValue, $utc);
+
+                        if ($parsed instanceof \DateTimeImmutable) {
+                                return $parsed->getTimestamp();
+                        }
+
+                        $fallback = strtotime($stringValue);
+
+                        return ($fallback !== false) ? $fallback : null;
+                }
+
                 public function renderRecordingRow($index, array $pathSegments, $downloadName, $otherparty, $datetime, $servicegroup, $callId, $description)
                 {
                         $playUrl = $this->buildPublicRecordingUrl($pathSegments);
