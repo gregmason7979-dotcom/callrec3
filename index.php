@@ -462,7 +462,6 @@ No previous sync found. Click to build the index.
         {
         $rosterEntries = $agentRoster;
 ?>
-        <div class="recordings__surface">
         <table class="record-table record-table--roster">
           <colgroup>
             <col class="record-col record-col--agent">
@@ -532,7 +531,6 @@ No previous sync found. Click to build the index.
 ?>
           </tbody>
         </table>
-        </div>
 <?php
 }else{
                 $i=0;
@@ -546,8 +544,7 @@ No previous sync found. Click to build the index.
                 }
                 $resultsRendered = false;
                 ?>
-    <div class="recordings__surface">
-    <table class="record-table record-table--results">
+    <table class="record-table">
                                            <tr class="table_top">
                                            <th width="300">Agent Name</th>
                                                 <th width="150">Other Parties</th>
@@ -781,7 +778,6 @@ No previous sync found. Click to build the index.
         }
         ?>
                                         </table>
-    </div>
 
         <?php } ?>
   </div>
