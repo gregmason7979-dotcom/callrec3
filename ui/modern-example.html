@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Call Recorder UI – Modern Design Example</title>
+  <link rel="stylesheet" href="css/modern-example.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">CR</div>
+      <div class="brand-text">
+        <span class="eyebrow">Call Recorder</span>
+        <strong>Operations Console</strong>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="sync-pill">
+        <span class="dot live"></span>
+        <span class="label">Index healthy</span>
+      </div>
+      <button class="ghost">View Logs</button>
+      <button class="primary">Sync Now</button>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div>
+      <p class="eyebrow">Last synced 12:04 PM today · Incremental</p>
+      <h1>Find recordings in milliseconds.</h1>
+      <p class="lede">
+        Indexed search keeps every agent, call, and tag at your fingertips. Syncs now run
+        incrementally, so you can refresh the index between calls without waiting.
+      </p>
+      <div class="hero-actions">
+        <button class="primary">Run smart sync</button>
+        <button class="ghost">Customize filters</button>
+      </div>
+    </div>
+    <div class="hero-card">
+      <div class="hero-card__row">
+        <span>Coverage</span>
+        <strong>98.6%</strong>
+      </div>
+      <div class="hero-card__progress">
+        <span style="width: 82%"></span>
+      </div>
+      <div class="hero-card__meta">
+        <div>
+          <p class="eyebrow">New since last sync</p>
+          <strong>142 recordings</strong>
+        </div>
+        <div>
+          <p class="eyebrow">Fastest search</p>
+          <strong>12 ms</strong>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid two">
+    <div class="card stats">
+      <div class="stat">
+        <p class="eyebrow">Total recordings</p>
+        <strong>48,210</strong>
+        <span class="trend up">+4.2% vs last week</span>
+      </div>
+      <div class="stat">
+        <p class="eyebrow">New today</p>
+        <strong>286</strong>
+        <span class="trend neutral">Incremental sync</span>
+      </div>
+      <div class="stat">
+        <p class="eyebrow">Avg. duration</p>
+        <strong>07:12</strong>
+        <span class="trend up">+18s vs last week</span>
+      </div>
+      <div class="stat">
+        <p class="eyebrow">Storage used</p>
+        <strong>312 GB</strong>
+        <span class="trend down">-3.4% trimmed</span>
+      </div>
+    </div>
+
+    <div class="card filters">
+      <div class="filters__header">
+        <div>
+          <p class="eyebrow">Search</p>
+          <strong>Indexed results first, file scan fallback</strong>
+        </div>
+        <button class="ghost">Reset</button>
+      </div>
+      <div class="filters__row">
+        <label>Agent</label>
+        <input type="text" placeholder="Start typing a name or extension" />
+      </div>
+      <div class="filters__row">
+        <label>Date</label>
+        <div class="pill-row">
+          <button class="pill active">Today</button>
+          <button class="pill">This week</button>
+          <button class="pill">Last 30 days</button>
+          <button class="pill">Custom</button>
+        </div>
+      </div>
+      <div class="filters__row">
+        <label>Contains</label>
+        <input type="text" placeholder="Customer name, notes, or tags" />
+      </div>
+      <div class="filters__footer">
+        <div class="hint">Search hits the database index first to keep results instant.</div>
+        <button class="primary">Search recordings</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid two">
+    <div class="card">
+      <div class="card__header">
+        <div>
+          <p class="eyebrow">Recent indexed results</p>
+          <strong>Top matches for "subscription upgrade"</strong>
+        </div>
+        <a href="#" class="link">View full results</a>
+      </div>
+      <div class="table">
+        <div class="table__row table__head">
+          <span>Recording</span>
+          <span>Agent</span>
+          <span>Duration</span>
+          <span>Synced</span>
+          <span>Source</span>
+        </div>
+        <div class="table__row">
+          <span class="muted">#48210 · 2025-12-03</span>
+          <span>Maria Chen</span>
+          <span>09:18</span>
+          <span>12:04 PM</span>
+          <span class="pill soft">DB index</span>
+        </div>
+        <div class="table__row">
+          <span class="muted">#48206 · 2025-12-03</span>
+          <span>David Singh</span>
+          <span>05:47</span>
+          <span>12:03 PM</span>
+          <span class="pill soft">DB index</span>
+        </div>
+        <div class="table__row">
+          <span class="muted">#48192 · 2025-12-03</span>
+          <span>Ana Silva</span>
+          <span>07:30</span>
+          <span>12:01 PM</span>
+          <span class="pill ghost">Filesystem</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card timeline">
+      <div class="card__header">
+        <div>
+          <p class="eyebrow">Sync timeline</p>
+          <strong>Faster, incremental passes</strong>
+        </div>
+        <a href="#" class="link">Open full log</a>
+      </div>
+      <ul>
+        <li>
+          <span class="dot live"></span>
+          <div>
+            <strong>Smart sync completed</strong>
+            <p class="muted">142 new recordings indexed · 12:04 PM</p>
+          </div>
+        </li>
+        <li>
+          <span class="dot"></span>
+          <div>
+            <strong>Reused prepared SQL statements</strong>
+            <p class="muted">Saved 23% time · 11:25 AM</p>
+          </div>
+        </li>
+        <li>
+          <span class="dot"></span>
+          <div>
+            <strong>Skipped unchanged agent folders</strong>
+            <p class="muted">No new files · 10:10 AM</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="card recordings">
+    <div class="card__header">
+      <div>
+        <p class="eyebrow">Agent activity</p>
+        <strong>Quick picks for reviewers</strong>
+      </div>
+      <div class="pill-row">
+        <button class="pill active">Team A</button>
+        <button class="pill">Team B</button>
+        <button class="pill">All</button>
+      </div>
+    </div>
+    <div class="recording-grid">
+      <article class="recording">
+        <div class="recording__meta">
+          <strong>Maria Chen</strong>
+          <span class="pill soft">Today</span>
+        </div>
+        <p class="muted">Customer asked for subscription upgrade; added billing note.</p>
+        <div class="recording__footer">
+          <span class="pill ghost">09:18</span>
+          <span class="pill soft">DB index</span>
+          <button class="ghost">Play</button>
+        </div>
+      </article>
+      <article class="recording">
+        <div class="recording__meta">
+          <strong>David Singh</strong>
+          <span class="pill soft">Today</span>
+        </div>
+        <p class="muted">Followed up on onboarding tasks; referenced prior ticket.</p>
+        <div class="recording__footer">
+          <span class="pill ghost">05:47</span>
+          <span class="pill soft">DB index</span>
+          <button class="ghost">Play</button>
+        </div>
+      </article>
+      <article class="recording">
+        <div class="recording__meta">
+          <strong>Ana Silva</strong>
+          <span class="pill soft">Today</span>
+        </div>
+        <p class="muted">Investigated call drops; escalated to Tier 2.</p>
+        <div class="recording__footer">
+          <span class="pill ghost">07:30</span>
+          <span class="pill soft">Filesystem</span>
+          <button class="ghost">Play</button>
+        </div>
+      </article>
+      <article class="recording">
+        <div class="recording__meta">
+          <strong>Riley James</strong>
+          <span class="pill soft">Yesterday</span>
+        </div>
+        <p class="muted">Documented new handset setup process with timestamps.</p>
+        <div class="recording__footer">
+          <span class="pill ghost">11:02</span>
+          <span class="pill soft">DB index</span>
+          <button class="ghost">Play</button>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div>
+      <strong>Need this live?</strong>
+      <p class="muted">We can apply this layout to the main pages with the new indexed search and sync hints.</p>
+    </div>
+    <div class="footer__actions">
+      <button class="primary">Apply to search</button>
+      <button class="ghost">Schedule rollout</button>
+    </div>
+  </footer>
+</body>
+</html>
