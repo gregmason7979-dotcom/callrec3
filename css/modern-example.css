@@ -245,8 +245,9 @@ button.ghost { background: transparent; border: var(--border); }
   padding: 10px 12px;
   border-radius: 10px;
   border: var(--border);
-  background: rgba(255, 255, 255, 0.04);
+  background: linear-gradient(135deg, rgba(8, 12, 26, 0.92), rgba(4, 7, 15, 0.96));
   color: var(--text);
+  appearance: none;
 }
 
 .search-advanced__footer {
@@ -311,7 +312,7 @@ button.ghost { background: transparent; border: var(--border); }
 .detail-row .showfull { background: rgba(0, 0, 0, 0.35); border-radius: 0 0 12px 12px; padding: 0 6px 6px; }
 .showfull__loading, .showfull__error, .table_cell--empty { color: var(--text); }
 
-.recordings__surface { background: linear-gradient(180deg, rgba(15, 23, 42, 0.75), rgba(8, 12, 26, 0.85)); padding: 14px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.06); box-shadow: var(--shadow); }
+.recordings__surface { background: linear-gradient(180deg, rgba(5, 10, 20, 0.9), rgba(2, 5, 12, 0.94)); padding: 14px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: var(--shadow); }
 
 .button-link { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 14px; border-radius: 12px; font-weight: 700; text-decoration: none; border: 1px solid rgba(255, 255, 255, 0.08); color: var(--text); }
 .button-link.primary { background: linear-gradient(135deg, #60a5fa, #a78bfa); color: #0b1021; border-color: transparent; box-shadow: 0 10px 30px rgba(96, 165, 250, 0.35); }
